@@ -156,8 +156,8 @@ class file_stat {
     out->st_ino = ino_;
     out->st_nlink = nlink_;
     out->st_mode = mode_;
-    out->st_uid = uid_;
-    out->st_gid = gid_;
+    out->st_uid = getuid();
+    out->st_gid = getgid();
     out->st_rdev = rdev_;
     out->st_size = size_;
     if constexpr (with_block_info) {
