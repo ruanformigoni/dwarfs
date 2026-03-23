@@ -1,0 +1,73 @@
+# SPDX-FileCopyrightText: Copyright (c) Ruan Formigoni
+# SPDX-License-Identifier: MIT
+
+name: 'Release AIO Build'
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: read
+
+jobs:
+  build-aio:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+          fetch-depth: '0'
+
+      - name: Generate release tag
+        id: tag
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          TAG="continuous-${SHORT_SHA}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "name=Continuous ${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Delete existing release if present
+        run: gh release delete "${{ steps.tag.outputs.tag }}" --cleanup-tag --yes 2>/dev/null || true
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Login to ghcr.io
+        run: echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Pull build image
+        run: docker pull ghcr.io/${{ github.repository }}/build-alpine-x86_64:latest
+
+      - name: Run build
+        run: |
+          mkdir -p ${{ runner.temp }}/artifacts
+          chmod 777 ${{ runner.temp }}
+          docker run --rm \
+            --mount type=bind,source=${{ github.workspace }},target=/workspace,readonly \
+            --mount type=bind,source=${{ runner.temp }},target=/tmp-runner \
+            --mount type=tmpfs,target=/local \
+            --mount type=tmpfs,target=/artifacts \
+            --mount type=tmpfs,target=/ccache \
+            --mount type=tmpfs,target=/shared-ccache \
+            --env BUILD_TYPE=clang-relsize-lto-notest-ninja-static \
+            --env BUILD_ARCH=amd64 \
+            --env BUILD_DIST=alpine \
+            --env GITHUB_WORKSPACE=/workspace \
+            --env GITHUB_REF_NAME=${{ steps.tag.outputs.tag }} \
+            --env GITHUB_REF_TYPE=tag \
+            --env GITHUB_RUN_ID=${{ github.run_id }} \
+            --env GITHUB_RUN_NUMBER=${{ github.run_number }} \
+            --env GITHUB_RUN_ATTEMPT=${{ github.run_attempt }} \
+            ghcr.io/${{ github.repository }}/build-alpine-x86_64:latest
+
+      - name: Create release
+        run: |
+          gh release create "${{ steps.tag.outputs.tag }}" \
+            --title "${{ steps.tag.outputs.name }}" \
+            --target "${{ github.sha }}" \
+            --prerelease \
+            ${{ runner.temp }}/artifacts/*
+        env:
+          GH_TOKEN: ${{ github.token }}

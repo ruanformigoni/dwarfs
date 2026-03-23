@@ -1,0 +1,35 @@
+# SPDX-FileCopyrightText: Copyright (c) Ruan Formigoni
+# SPDX-License-Identifier: MIT
+
+name: 'Publish Docker Build Image'
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        run: |
+          IMAGE=ghcr.io/${{ github.repository }}/build-alpine-x86_64:latest
+          docker buildx build --progress=plain \
+            -f .docker/Dockerfile.alpine_x86_64 \
+            -t "$IMAGE" \
+            .docker
+          docker push "$IMAGE"
