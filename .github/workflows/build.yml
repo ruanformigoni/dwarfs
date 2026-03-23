@@ -5,30 +5,30 @@ name: 'DwarFS CI Build'
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-      - 'mhx/**'
-    tags:
-      - v*
-    paths-ignore:
-      - '.benchmark/**'
-      - '.clang-format'
-      - '.clang-tidy'
-      - '.gitignore'
-      - '.maintainer-scripts/**'
-      - 'CHANGES.md'
-      - 'CITATION.cff'
-      - 'README.md'
-      - 'TODO'
-      - 'data/**'
-      - 'doc/completions/**'
-      - 'doc/perf/**'
-      - 'doc/*.gif'
-      - 'doc/*.png'
-      - 'doc/*.puml'
-      - 'doc/*.svg'
-      - 'scripts/**'
+  # push:
+  #   branches:
+  #     - main
+  #     - 'mhx/**'
+  #   tags:
+  #     - v*
+  #   paths-ignore:
+  #     - '.benchmark/**'
+  #     - '.clang-format'
+  #     - '.clang-tidy'
+  #     - '.gitignore'
+  #     - '.maintainer-scripts/**'
+  #     - 'CHANGES.md'
+  #     - 'CITATION.cff'
+  #     - 'README.md'
+  #     - 'TODO'
+  #     - 'data/**'
+  #     - 'doc/completions/**'
+  #     - 'doc/perf/**'
+  #     - 'doc/*.gif'
+  #     - 'doc/*.png'
+  #     - 'doc/*.puml'
+  #     - 'doc/*.svg'
+  #     - 'scripts/**'
 
 permissions:
   contents: read
