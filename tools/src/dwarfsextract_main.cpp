@@ -35,6 +35,7 @@
 #include <boost/program_options.hpp>
 
 #include <dwarfs/config.h>
+#include <dwarfs/conv.h>
 #include <dwarfs/decompressor_registry.h>
 #include <dwarfs/glob_matcher.h>
 #include <dwarfs/logger.h>
@@ -114,7 +115,7 @@ class progress_thread {
 
 int dwarfsextract_main(int argc, sys_char** argv, iolayer const& iol) {
   sys_string fs_image, output, trace_file;
-  std::string cache_size_str, image_offset;
+  std::string cache_size_str, image_offset, image_size;
   logger_options logopts;
 #ifndef DWARFS_FILESYSTEM_EXTRACTOR_NO_OPEN_FORMAT
   utility::filesystem_extractor_archive_format format;
@@ -148,6 +149,9 @@ int dwarfsextract_main(int argc, sys_char** argv, iolayer const& iol) {
     ("image-offset,O",
         po::value<std::string>(&image_offset)->default_value("auto"),
         "filesystem image offset in bytes")
+    ("image-size,S",
+        po::value<std::string>(&image_size),
+        "filesystem image size in bytes")
 #ifndef DWARFS_FILESYSTEM_EXTRACTOR_NO_OPEN_FORMAT
     ("format,f",
         po::value<std::string>(&format.name),
@@ -241,6 +245,9 @@ int dwarfsextract_main(int argc, sys_char** argv, iolayer const& iol) {
     reader::filesystem_options fsopts;
 
     fsopts.image_offset = reader::parse_image_offset(image_offset);
+    if (!image_size.empty()) {
+      fsopts.image_size = to<file_off_t>(image_size);
+    }
     fsopts.block_cache.max_bytes = parse_size_with_unit(cache_size_str);
     fsopts.block_cache.num_workers = num_workers;
     fsopts.block_cache.disable_block_integrity_check = disable_integrity_check;
