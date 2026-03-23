@@ -177,7 +177,7 @@ int dwarfsck_main(int argc, sys_char** argv, iolayer const& iol) {
   auto const detail_default{reader::fsinfo_features::for_level(2).to_string()};
 
   sys_string input, export_metadata;
-  std::string cache_size_str, image_offset, checksum_algo;
+  std::string cache_size_str, image_offset, image_size, checksum_algo;
   logger_options logopts;
   size_t num_workers;
   std::string detail;
@@ -207,6 +207,9 @@ int dwarfsck_main(int argc, sys_char** argv, iolayer const& iol) {
     ("image-offset,O",
         po::value<std::string>(&image_offset)->default_value("auto"),
         "filesystem image offset in bytes")
+    ("image-size,S",
+        po::value<std::string>(&image_size),
+        "filesystem image size in bytes")
     ("print-header,H",
         po::value<bool>(&print_header)->zero_tokens(),
         "print filesystem header to stdout and exit")
@@ -300,6 +303,9 @@ int dwarfsck_main(int argc, sys_char** argv, iolayer const& iol) {
 
     fsopts.metadata.check_consistency = !no_check;
     fsopts.image_offset = reader::parse_image_offset(image_offset);
+    if (!image_size.empty()) {
+      fsopts.image_size = to<file_off_t>(image_size);
+    }
     fsopts.block_cache.max_bytes = parse_size_with_unit(cache_size_str);
     fsopts.block_cache.num_workers = num_workers;
 
