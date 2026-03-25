@@ -158,9 +158,16 @@ mkdir -p $PREFIX/lib/ccache/bin
 
 # Symbolic links for clang
 for clang_binary in /usr/bin/clang{++,}{-[1-9]*,}; do
+    [ -e "$clang_binary" ] || continue
     name=$(basename $clang_binary)
     ln -s $clang_binary $PREFIX/bin/$TARGET-$name
     ln -s /usr/bin/ccache $PREFIX/lib/ccache/bin/$TARGET-$name
+    # Create unversioned symlinks (e.g., clang-21 -> clang)
+    unversioned=$(echo "$name" | sed 's/-[0-9]*$//')
+    if [ "$unversioned" != "$name" ]; then
+        ln -sf $clang_binary $PREFIX/bin/$TARGET-$unversioned
+        ln -sf /usr/bin/ccache $PREFIX/lib/ccache/bin/$TARGET-$unversioned
+    fi
 done
 
 # Also provide ccache symlinks for gcc
