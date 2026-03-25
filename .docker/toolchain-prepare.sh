@@ -17,7 +17,7 @@ mkdir pkgs
 cd pkgs
 
 fetch.sh https://mirror.netcologne.de/gnu/binutils/${BINUTILS_TARBALL}
-fetch.sh https://ftp.gwdg.de/pub/misc/gcc/releases/gcc-${GCC_VERSION}/${GCC_TARBALL}
+fetch.sh https://gcc.gnu.org/pub/gcc/releases/gcc-${GCC_VERSION}/${GCC_TARBALL}
 fetch.sh https://www.musl-libc.org/releases/${MUSL_TARBALL}
 fetch.sh https://cdn.kernel.org/pub/linux/kernel/v6.x/${LINUX_TARBALL}
 
