@@ -4,7 +4,9 @@
 name: 'Release AIO Build'
 
 on:
-  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
 
 permissions:
   contents: write
@@ -30,6 +32,24 @@ jobs:
         with:
           submodules: 'true'
           fetch-depth: '0'
+
+      - name: Validate tag
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          # Validate tag matches git describe
+          GIT_DESC="$(git describe --tags --match 'v*' --exact-match)"
+          if [[ "${TAG}" != "${GIT_DESC}" ]]; then
+            echo "ERROR: Tag '${TAG}' does not match git describe '${GIT_DESC}'" >&2
+            exit 1
+          fi
+          # Validate tagged commit is HEAD of main
+          TAGGED_SHA="$(git rev-list -n 1 "${TAG}")"
+          MAIN_SHA="$(git rev-parse origin/main)"
+          if [[ "${TAGGED_SHA}" != "${MAIN_SHA}" ]]; then
+            echo "ERROR: Tag '${TAG}' (${TAGGED_SHA}) is not at HEAD of main (${MAIN_SHA})" >&2
+            exit 1
+          fi
+          echo "Tag ${TAG} validated"
 
       - name: Login to ghcr.io
         run: echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
@@ -62,10 +82,13 @@ jobs:
 
       - name: Rename artifacts
         run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
           sudo chmod -R 777 ${{ runner.temp }}/artifacts
           cd ${{ runner.temp }}/artifacts
+          # Keep only dwarfs-universal, rename to upstream pattern
           for f in dwarfs-universal-*; do
-            [ -f "$f" ] && mv "$f" "dwarfs-universal-${{ matrix.arch_label }}"
+            [ -f "$f" ] && mv "$f" "dwarfs-universal-${VERSION}-Linux-${{ matrix.arch_label }}"
           done
           rm -f dwarfs-fuse-extract-* *.tar.zst
 
@@ -83,19 +106,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Generate release tag
-        id: tag
-        run: |
-          SHORT_SHA=$(git rev-parse --short HEAD)
-          TAG="continuous-${SHORT_SHA}"
-          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
-          echo "name=Continuous ${SHORT_SHA}" >> "$GITHUB_OUTPUT"
-
-      - name: Delete existing release if present
-        run: gh release delete "${{ steps.tag.outputs.tag }}" --cleanup-tag --yes 2>/dev/null || true
-        env:
-          GH_TOKEN: ${{ github.token }}
-
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -104,10 +114,9 @@ jobs:
 
       - name: Create release
         run: |
-          gh release create "${{ steps.tag.outputs.tag }}" \
-            --title "${{ steps.tag.outputs.name }}" \
-            --target "${{ github.sha }}" \
-            --prerelease \
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "${GITHUB_REF_NAME}" \
+            --notes "Commit: ${GITHUB_SHA}" \
             artifacts/*
         env:
           GH_TOKEN: ${{ github.token }}
