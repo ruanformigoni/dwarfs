@@ -43,15 +43,5 @@ fetch_lib utfcpp https://github.com/nemtrif/utfcpp/archive/refs/tags/v${UTFCPP_V
 fetch_lib range-v3 https://github.com/ericniebler/range-v3/archive/refs/tags/${RANGE_V3_VERSION}.tar.gz ${RANGE_V3_TARBALL}
 fetch_lib parallel-hashmap https://github.com/greg7mdp/parallel-hashmap/archive/refs/tags/v${PARALLEL_HASHMAP_VERSION}.tar.gz ${PARALLEL_HASHMAP_TARBALL}
 
-# file is special, as you often receive crap from the ftp server
-RETRY=0
-while true; do
-    if fetch.sh "ftp://ftp.astron.com/pub/file/$FILE_TARBALL" "$FILE_TARBALL" "$FILE_SHA512"; then
-        break
-    fi
-    RETRY=$((RETRY+1))
-    if [ $RETRY -gt 10 ]; then
-        echo "Failed to download $FILE_TARBALL"
-        exit 1
-    fi
-done
+# file — Debian mirror (ftp.astron.com FTP is unreliable)
+fetch.sh "http://deb.debian.org/debian/pool/main/f/file/file_${FILE_VERSION}.orig.tar.gz" "$FILE_TARBALL" "$FILE_SHA512"
