@@ -2,7 +2,7 @@
 #
 ###############################################################################
 #
-# Based on upstream Dockerfile, stripped to x86_64 and aarch64 only.
+# Based on upstream Dockerfile, stripped to target architectures only.
 #
 # SPDX-FileCopyrightText: Copyright (c) Marcus Holland-Moritz
 # SPDX-License-Identifier: MIT
@@ -64,7 +64,12 @@ RUN apk add --no-cache \
         gdb-multiarch \
         rsync \
         screen \
-        qemu-aarch64
+        qemu-aarch64 \
+        qemu-arm \
+        qemu-i386 \
+        qemu-riscv64 \
+        qemu-ppc64le \
+        qemu-s390x
 
 COPY fetch.sh /usr/local/bin/fetch.sh
 
@@ -143,12 +148,127 @@ RUN --mount=type=cache,id=ccache,target=/root/.ccache --mount=type=cache,id=pkgc
 
 ###############################################################################
 
+FROM build_base AS toolchain_arm
+
+RUN --mount=type=cache,id=ccache,target=/root/.ccache --mount=type=cache,id=pkgcache,target=/root/.pkgcache \
+    bash /usr/local/bin/toolchain-install.sh 2 arm
+
+RUN apk del zlib-dev zstd-dev
+
+###############################################################################
+
+FROM toolchain_arm AS staticlibs_arm_clang-minsize-lto
+
+COPY --link --from=staticlibs_base /root/pkgs/ /root/pkgs/
+
+COPY static-libs-versions.sh /usr/local/bin/static-libs-versions.sh
+COPY static-libs-install.sh /usr/local/bin/static-libs-install.sh
+
+RUN --mount=type=cache,id=ccache,target=/root/.ccache --mount=type=cache,id=pkgcache,target=/root/.pkgcache \
+    bash /usr/local/bin/static-libs-install.sh :all arm clang-minsize-lto
+
+###############################################################################
+
+FROM build_base AS toolchain_i386
+
+RUN --mount=type=cache,id=ccache,target=/root/.ccache --mount=type=cache,id=pkgcache,target=/root/.pkgcache \
+    bash /usr/local/bin/toolchain-install.sh 2 i386
+
+RUN apk del zlib-dev zstd-dev
+
+###############################################################################
+
+FROM toolchain_i386 AS staticlibs_i386_clang-minsize-lto
+
+COPY --link --from=staticlibs_base /root/pkgs/ /root/pkgs/
+
+COPY static-libs-versions.sh /usr/local/bin/static-libs-versions.sh
+COPY static-libs-install.sh /usr/local/bin/static-libs-install.sh
+
+RUN --mount=type=cache,id=ccache,target=/root/.ccache --mount=type=cache,id=pkgcache,target=/root/.pkgcache \
+    bash /usr/local/bin/static-libs-install.sh :all i386 clang-minsize-lto
+
+###############################################################################
+
+FROM build_base AS toolchain_riscv64
+
+RUN --mount=type=cache,id=ccache,target=/root/.ccache --mount=type=cache,id=pkgcache,target=/root/.pkgcache \
+    bash /usr/local/bin/toolchain-install.sh 2 riscv64
+
+RUN apk del zlib-dev zstd-dev
+
+###############################################################################
+
+FROM toolchain_riscv64 AS staticlibs_riscv64_clang-minsize-lto
+
+COPY --link --from=staticlibs_base /root/pkgs/ /root/pkgs/
+
+COPY static-libs-versions.sh /usr/local/bin/static-libs-versions.sh
+COPY static-libs-install.sh /usr/local/bin/static-libs-install.sh
+
+RUN --mount=type=cache,id=ccache,target=/root/.ccache --mount=type=cache,id=pkgcache,target=/root/.pkgcache \
+    bash /usr/local/bin/static-libs-install.sh :all riscv64 clang-minsize-lto
+
+###############################################################################
+
+FROM build_base AS toolchain_ppc64le
+
+RUN --mount=type=cache,id=ccache,target=/root/.ccache --mount=type=cache,id=pkgcache,target=/root/.pkgcache \
+    bash /usr/local/bin/toolchain-install.sh 2 ppc64le
+
+RUN apk del zlib-dev zstd-dev
+
+###############################################################################
+
+FROM toolchain_ppc64le AS staticlibs_ppc64le_clang-minsize-lto
+
+COPY --link --from=staticlibs_base /root/pkgs/ /root/pkgs/
+
+COPY static-libs-versions.sh /usr/local/bin/static-libs-versions.sh
+COPY static-libs-install.sh /usr/local/bin/static-libs-install.sh
+
+RUN --mount=type=cache,id=ccache,target=/root/.ccache --mount=type=cache,id=pkgcache,target=/root/.pkgcache \
+    bash /usr/local/bin/static-libs-install.sh :all ppc64le clang-minsize-lto
+
+###############################################################################
+
+FROM build_base AS toolchain_s390x
+
+RUN --mount=type=cache,id=ccache,target=/root/.ccache --mount=type=cache,id=pkgcache,target=/root/.pkgcache \
+    bash /usr/local/bin/toolchain-install.sh 2 s390x
+
+RUN apk del zlib-dev zstd-dev
+
+###############################################################################
+
+FROM toolchain_s390x AS staticlibs_s390x_clang-minsize-lto
+
+COPY --link --from=staticlibs_base /root/pkgs/ /root/pkgs/
+
+COPY static-libs-versions.sh /usr/local/bin/static-libs-versions.sh
+COPY static-libs-install.sh /usr/local/bin/static-libs-install.sh
+
+RUN --mount=type=cache,id=ccache,target=/root/.ccache --mount=type=cache,id=pkgcache,target=/root/.pkgcache \
+    bash /usr/local/bin/static-libs-install.sh :all s390x clang-minsize-lto
+
+###############################################################################
+
 FROM base AS final
 
 COPY --link --from=toolchain_x86_64 /opt/cross/ /opt/cross/
 COPY --link --from=toolchain_aarch64 /opt/cross/ /opt/cross/
+COPY --link --from=toolchain_arm /opt/cross/ /opt/cross/
+COPY --link --from=toolchain_i386 /opt/cross/ /opt/cross/
+COPY --link --from=toolchain_riscv64 /opt/cross/ /opt/cross/
+COPY --link --from=toolchain_ppc64le /opt/cross/ /opt/cross/
+COPY --link --from=toolchain_s390x /opt/cross/ /opt/cross/
 COPY --link --from=staticlibs_x86_64_clang-minsize-lto /opt/static-libs/ /opt/static-libs/
 COPY --link --from=staticlibs_aarch64_clang-minsize-lto /opt/static-libs/ /opt/static-libs/
+COPY --link --from=staticlibs_arm_clang-minsize-lto /opt/static-libs/ /opt/static-libs/
+COPY --link --from=staticlibs_i386_clang-minsize-lto /opt/static-libs/ /opt/static-libs/
+COPY --link --from=staticlibs_riscv64_clang-minsize-lto /opt/static-libs/ /opt/static-libs/
+COPY --link --from=staticlibs_ppc64le_clang-minsize-lto /opt/static-libs/ /opt/static-libs/
+COPY --link --from=staticlibs_s390x_clang-minsize-lto /opt/static-libs/ /opt/static-libs/
 
 # Install UPX
 RUN --mount=type=cache,id=ccache,target=/root/.ccache --mount=type=cache,id=pkgcache,target=/root/.pkgcache \

@@ -25,6 +25,21 @@ jobs:
           - arch_label: aarch64
             build_arch: amd64
             cross_arch: aarch64
+          - arch_label: armv7l
+            build_arch: amd64
+            cross_arch: arm
+          - arch_label: i686
+            build_arch: amd64
+            cross_arch: i386
+          - arch_label: riscv64
+            build_arch: amd64
+            cross_arch: riscv64
+          - arch_label: ppc64le
+            build_arch: amd64
+            cross_arch: ppc64le
+          - arch_label: s390x
+            build_arch: amd64
+            cross_arch: s390x
 
     steps:
       - name: Checkout
