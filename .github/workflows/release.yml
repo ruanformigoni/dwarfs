@@ -76,13 +76,15 @@ jobs:
         run: |
           mkdir -p ${{ runner.temp }}/artifacts
           chmod 777 ${{ runner.temp }}
-          docker run --rm \
+          docker run --rm --user root \
             --mount type=bind,source=${{ github.workspace }},target=/workspace,readonly \
             --mount type=bind,source=${{ runner.temp }},target=/tmp-runner \
             --mount type=tmpfs,target=/local \
             --mount type=tmpfs,target=/artifacts \
+            --mount type=tmpfs,target=/tmp \
             --mount type=tmpfs,target=/ccache \
             --mount type=tmpfs,target=/shared-ccache \
+            --env TMPDIR=/tmp \
             --env BUILD_TYPE=clang-relsize-lto-notest-ninja-static \
             --env BUILD_ARCH=${{ matrix.build_arch }} \
             --env BUILD_DIST=alpine \
